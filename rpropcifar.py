@@ -5,6 +5,8 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
+import numpy as np
+from torch.utils.data.sampler import SubsetRandomSampler
 
 import argparse
 import optuna
@@ -46,8 +48,24 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
 
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                             download=True, transform=transform)
+    validset = torchvision.datasets.CIFAR10(root='./data', train=True,
+                                            download=True, transform=transform)
+
+    num_train = len(trainset)
+    valid_size = 0.1
+    indices = list(range(num_train))
+    split = int(np.floor(valid_size * num_train))
+    np.random.seed(42)
+    np.random.shuffle(indices)
+    train_idx, valid_idx = indices[split:], indices[:split]
+    train_sampler = SubsetRandomSampler(train_idx)
+    valid_sampler = SubsetRandomSampler(valid_idx)
+
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                              shuffle=True, num_workers=0)
+                                              sampler=train_sampler, num_workers=0)
+    validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size,
+                                              sampler=valid_sampler, num_workers=0)
+
     #set num_workers to 0 if you get a BrokenPipeError
     testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                            download=True, transform=transform)
@@ -71,6 +89,7 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
     for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
+        total_train = 0
         for i, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
@@ -91,7 +110,26 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
                       (epoch + 1, i + 1, running_loss / 2000))
                 running_loss = 0.0
 
+            total_train += labels.size(0)
+
+
+
+        # test the model ont he validation set
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data in validloader:
+                images, labels = data
+                outputs = net(images)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+        print('Accuracy of the network on the ', total, ' validation images: %d %%' % (
+                100 * correct / total))
+
     print('Finished Training')
+    print("train size: ", total_train)
 
 
     # test the model
@@ -105,7 +143,7 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print('Accuracy of the network on the 10000 test images: %d %%' % (
+    print('Accuracy of the network on the ', total, ' test images: %d %%' % (
         100 * correct / total))
 
     class_correct = list(0. for i in range(10))
