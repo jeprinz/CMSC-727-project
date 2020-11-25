@@ -4,15 +4,22 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-import torch.nn.functional as F
 import torch.optim as optim
+
 import argparse
 import optuna
+from Net import Net
 
 
-num_trials = 1  # default number of trials for optimization over
+#num_trials = 1  # default number of trials for optimization over
 
 def objective(trial, args):
+    '''
+    Optimize the hyperpatameters
+    :param trial:
+    :param args: arg parser with epochs, use_rprop
+    :return:
+    '''
     learning_rate = trial.suggest_uniform('learning_rate', 0.001, 0.5)
     momentum = trial.suggest_uniform('momentum', 0.1, 0.9)
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
@@ -23,6 +30,15 @@ def objective(trial, args):
 
 
 def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
+    '''
+    Function to run (train and test) the model once
+    :param epochs: number of training epochs
+    :param batch_size:
+    :param use_rprop: True if using rprop optimizer, False if using SGD optimizer
+    :param learning_rate:
+    :param momentum:
+    :return:
+    '''
     # load data
     transform = transforms.Compose(
         [transforms.ToTensor(),
@@ -42,36 +58,16 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
                'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
-    # define the model
-    class Net(nn.Module):
-
-        def __init__(self):
-            super(Net, self).__init__()
-            self.conv1 = nn.Conv2d(3, 6, 5)
-            self.pool = nn.MaxPool2d(2,2)
-            self.conv2 = nn.Conv2d(6,16,5)
-            self.fc1 = nn.Linear(16*5*5,120)
-            self.fc2 = nn.Linear(120, 84)
-            self.fc3 = nn.Linear(84, 10)
-
-        def forward(self,x):
-            x = self.pool(F.relu(self.conv1(x)))
-            x = self.pool(F.relu(self.conv2(x)))
-            x = x.view(-1, 16*5*5)
-            x = F.relu(self.fc1(x))
-            x = F.relu(self.fc2(x))
-            x = self.fc3(x)
-            return x
-
-    # train the model
+    # set up the model and optimizer
     net = Net()
 
     criterion = nn.CrossEntropyLoss()
     if(use_rprop):
-        optimizer = optim.Rprop(net.parameters()) #(default params: lr = 0.01, etas = (0.5,1.2), step_sizes(1e-06,50))
+        optimizer = optim.Rprop(net.parameters(), lr=learning_rate) #(default params: lr = 0.01, etas = (0.5,1.2), step_sizes(1e-06,50))
     else:
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
+    # train the model
     for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
@@ -147,4 +143,4 @@ args = parser.parse_args()
 study = optuna.create_study()
 study.optimize(lambda trial: objective(trial, args), n_trials=args.num_trials)
 
-print(study.best_params)  # E.g. {'x': 2.002108042}
+print("The best parameters are: \n", study.best_params)  # E.g. {'x': 2.002108042}
