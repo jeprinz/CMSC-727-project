@@ -6,27 +6,41 @@ import torchvision
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 import torch.optim as optim
+import argparse
+import optuna
 
+# parse command line args
+parser = argparse.ArgumentParser(description='Collect hyperparameters.')
+parser.add_argument('--epochs', type=int, help='number of epochs for training')
+parser.add_argument('--batch_size', type=int, help='number of samples per training batch')
+parser.add_argument('--use_rprop', type=bool, help='True if using rprop, False if using sgd')
+args = parser.parse_args()
+
+batch_size = args.batch_size
+
+
+# load data
 transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                         download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                           shuffle=True, num_workers=0)
 #set num_workers to 0 if you get a BrokenPipeError
 testset = torchvision.datasets.CIFAR10(root='./data', train=False,
                                        download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4,
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                          shuffle=False, num_workers=0)
 
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
-rprop = True #change to use Rprop, leave as is to use SGD
+rprop = args.use_rprop #change to use Rprop, leave as is to use SGD
 
+# define the model
 class Net(nn.Module):
     
     def __init__(self):
@@ -47,7 +61,7 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
     
-
+# train the model
 net = Net()
 
 criterion = nn.CrossEntropyLoss()
@@ -56,7 +70,7 @@ if(rprop):
 else:
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     
-for epoch in range(2):  # loop over the dataset multiple times
+for epoch in range(args.epochs):  # loop over the dataset multiple times
 
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -81,6 +95,8 @@ for epoch in range(2):  # loop over the dataset multiple times
 
 print('Finished Training')
 
+
+# test the model
 correct = 0
 total = 0
 with torch.no_grad():
