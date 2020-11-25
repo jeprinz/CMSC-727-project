@@ -10,15 +10,9 @@ import argparse
 import optuna
 
 
+num_trials = 1  # default number of trials for optimization over
 
-def objective(trial):
-    # parse command line args
-    parser = argparse.ArgumentParser(description='Collect hyperparameters.')
-    parser.add_argument('--epochs', type=int, help='number of epochs for training')
-   # parser.add_argument('--batch_size', type=int, help='number of samples per training batch')
-    parser.add_argument('--use_rprop', type=bool, help='True if using rprop, False if using sgd')
-    args = parser.parse_args()
-
+def objective(trial, args):
     learning_rate = trial.suggest_uniform('learning_rate', 0.001, 0.5)
     momentum = trial.suggest_uniform('momentum', 0.1, 0.9)
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
@@ -139,7 +133,18 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
     return 100 * correct / total  # return the overall accuracy
 
 
+
+# parse command line args
+parser = argparse.ArgumentParser(description='Collect hyperparameters.')
+parser.add_argument('--epochs', type=int, help='number of epochs for training')
+parser.add_argument('--num_trials', type=int,
+                        help='The number of times Optuna will train the model. Higher means better optimization, but longer training time')
+# parser.add_argument('--batch_size', type=int, help='number of samples per training batch')
+parser.add_argument('--use_rprop', type=bool, help='True if using rprop, False if using sgd')
+args = parser.parse_args()
+
+# create study and optimize
 study = optuna.create_study()
-study.optimize(objective, n_trials=10)
+study.optimize(lambda trial: objective(trial, args), n_trials=args.num_trials)
 
 print(study.best_params)  # E.g. {'x': 2.002108042}
