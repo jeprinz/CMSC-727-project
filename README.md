@@ -17,14 +17,24 @@
                         True if using rprop, False if using sgd`
 `
 
-# Example use case
+# Example Use Case
 `python rpropcifar.py --epochs 2 --num_trials 10  --use_rprop False`
 
-The rest of the parameters will be optimized by Optuna:
+This will train a model for 2 epochs using SGD optimizer. It will search the paramter space by retraining the model 10 times, and print the best parameters it found at the end.
+
+# The Optimization
+These parameters will be optimized by Optuna:
 
 - Batch size
 - Momentum
 - Learning rate
+
+Things we are not currently optimizing for but might want to:
+- etas and stepsizes (for RPROP only. See documentation [https://pytorch.org/docs/stable/optim.html])
+- sizes of layers in the network
+- number of layers in the network
+- activation function 
+- type of pooling
 
 The current version optimizes all 3 of those when rprop is False (so using SGD) and only optimizes batch size when rprop is True.
 I will update this soon so it works fully for both, but for now we can optimize the baseline model with SGD not rprop.
