@@ -13,7 +13,8 @@ import optuna
 from Net import Net
 
 
-#num_trials = 1  # default number of trials for optimization over
+classes = ('plane', 'car', 'bird', 'cat',
+           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 def objective(trial, args):
     '''
@@ -26,9 +27,9 @@ def objective(trial, args):
     momentum = trial.suggest_uniform('momentum', 0.1, 0.9)
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
 
-    accuracy = run_model(epochs=args.epochs, batch_size=batch_size, use_rprop=args.use_rprop,
+    valid_accuracy, _, _ = run_model(epochs=args.epochs, batch_size=batch_size, use_rprop=args.use_rprop,
                          learning_rate=learning_rate, momentum=momentum)
-    return -1 * accuracy
+    return -1 * valid_accuracy
 
 
 def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
@@ -72,9 +73,6 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=False, num_workers=0)
 
-    classes = ('plane', 'car', 'bird', 'cat',
-               'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
 
     # set up the model and optimizer
     net = Net()
@@ -113,7 +111,6 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
             total_train += labels.size(0)
 
 
-
         # test the model ont he validation set
         correct = 0
         total = 0
@@ -127,11 +124,15 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
 
         print('Accuracy of the network on the ', total, ' validation images: %d %%' % (
                 100 * correct / total))
+        valid_accuracy = 100 * correct / total
 
     print('Finished Training')
     print("train size: ", total_train)
 
+    return valid_accuracy, net, testloader
 
+
+def test_model(testloader, net):
     # test the model
     correct = 0
     total = 0
@@ -164,21 +165,26 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
         print('Accuracy of %5s : %2d %%' % (
             classes[i], 100 * class_correct[i] / class_total[i]))
 
-    return 100 * correct / total  # return the overall accuracy
-
-
 
 # parse command line args
 parser = argparse.ArgumentParser(description='Collect hyperparameters.')
 parser.add_argument('--epochs', type=int, help='number of epochs for training')
 parser.add_argument('--num_trials', type=int,
                         help='The number of times Optuna will train the model. Higher means better optimization, but longer training time')
-# parser.add_argument('--batch_size', type=int, help='number of samples per training batch')
+parser.add_argument('--batch_size', type=int, nargs='?', default=16, help='number of samples per training batch')
+parser.add_argument('--learning_rate', type=float, nargs='?', default=0.1, help='the learning rate between 0 and 1')
+parser.add_argument('--momentum', type=float, nargs='?', default=0, help='the momentum to use betweeon 0 and 1')
 parser.add_argument('--use_rprop', type=bool, help='True if using rprop, False if using sgd')
 args = parser.parse_args()
 
-# create study and optimize
-study = optuna.create_study()
-study.optimize(lambda trial: objective(trial, args), n_trials=args.num_trials)
 
-print("The best parameters are: \n", study.best_params)  # E.g. {'x': 2.002108042}
+if args.num_trials > 0:
+    # create study and optimize
+    study = optuna.create_study()
+    study.optimize(lambda trial: objective(trial, args), n_trials=args.num_trials)
+    print("The best parameters are: \n", study.best_params)
+else:
+    # only train the model on the specified params and test it
+    _, net, testloader = run_model(args.epochs, args.batch_size, args.use_rprop, args.learning_rate, args.momentum)
+    test_model(testloader, net)
+

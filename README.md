@@ -18,9 +18,21 @@
 `
 
 # Example Use Case
-`python rpropcifar.py --epochs 2 --num_trials 10  --use_rprop False`
+First, run something like:
+`python rpropcifar.py --epochs 50 --num_trials 50  --use_rprop False`
 
-This will train a model for 2 epochs using SGD optimizer. It will search the paramter space by retraining the model 10 times, and print the best parameters it found at the end.
+This will train a model for 50 epochs using SGD optimizer. It will search the parameter space by retraining the model 50 times, and print the best parameters it found at the end.
+The output will look like (just an example, the numbers will likely be different):
+
+`The best parameters are:`
+
+`{'learning_rate': 0.006510474124597193, 'momentum': 0.3450199439278914, 'batch_size': 8}`
+
+You can then get the test accuracy by running the model with those parameters. To do this you must provide the parameters via command line and specify the number of trials to be 0, since we are no longer optimizing. An example:
+
+`python rpropcifar.py --epochs 50  --use_rprop False --num_trials 0 --learning_rate 0.01 --momentum 0.35 --batch_size 8`
+
+This will produce an overall test accuracy, as well as a class by class accuracy.
 
 # The Optimization
 These parameters will be optimized by Optuna:
