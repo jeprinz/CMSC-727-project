@@ -24,7 +24,7 @@ def objective(trial, args):
     :return:
     '''
     learning_rate = trial.suggest_uniform('learning_rate', 0.001, 0.5)
-    momentum = trial.suggest_uniform('momentum', 0.1, 0.9)
+    momentum = 0 #trial.suggest_uniform('momentum', 0.1, 0.9)
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
 
     trainloader, validloader, _ = load_data(batch_size)
