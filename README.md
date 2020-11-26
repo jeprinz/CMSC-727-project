@@ -14,12 +14,12 @@
                         time`
  
   `--use_rprop USE_RPROP
-                        True if using rprop, False if using sgd`
+                        Use this flag if you want to use rprop. --use_rprop True will make rprop the optimizer`
 `
 
 # Example Use Case
 First, run something like:
-`python rpropcifar.py --epochs 50 --num_trials 50  --use_rprop False`
+`python rpropcifar.py --epochs 50 --num_trials 50`
 
 This will train a model for 50 epochs using SGD optimizer. It will search the parameter space by retraining the model 50 times, and print the best parameters it found at the end.
 The output will look like (just an example, the numbers will likely be different):

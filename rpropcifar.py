@@ -28,8 +28,22 @@ def objective(trial, args):
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
 
     trainloader, validloader, _ = load_data(batch_size)
-    valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs, use_rprop=args.use_rprop,
-                         learning_rate=learning_rate, momentum=momentum)
+
+    if args.use_rprop:
+        eta_minus = trial.suggest_uniform('eta_minus', 0, 1.2)
+        eta_plus = trial.suggest_uniform('eta_plus', 1.2, 5)
+        etas = (eta_minus, eta_plus)
+
+        step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
+        step_plus = trial.suggest_uniform('step_plus', 20, 100)
+        step_sizes = (step_minus, step_plus)
+
+        valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs, use_rprop=args.use_rprop,
+                         learning_rate=learning_rate, etas=etas, step_sizes=step_sizes)
+    else:
+        valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs,
+                                      use_rprop=args.use_rprop, learning_rate=learning_rate, momentum=momentum)
+
     return -1 * valid_accuracy
 
 
@@ -76,7 +90,7 @@ def create_model():
     return Net()
 
 
-def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum):
+def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None):
     '''
     Function to run (train and test) the model once
     :param epochs: number of training epochs
@@ -91,8 +105,10 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
 
     criterion = nn.CrossEntropyLoss()
     if(use_rprop):
-        optimizer = optim.Rprop(net.parameters(), lr=learning_rate) #(default params: lr = 0.01, etas = (0.5,1.2), step_sizes(1e-06,50))
+        print("using rprop!!!!")
+        optimizer = optim.Rprop(net.parameters(), lr=learning_rate, etas=etas, step_sizes=step_sizes) #(default params: lr = 0.01, etas = (0.5,1.2), step_sizes(1e-06,50))
     else:
+        print("using sgd!!!")
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
     # train the model
@@ -191,10 +207,10 @@ parser.add_argument('--num_trials', type=int,
 parser.add_argument('--batch_size', type=int, nargs='?', default=16, help='number of samples per training batch')
 parser.add_argument('--learning_rate', type=float, nargs='?', default=0.1, help='the learning rate between 0 and 1')
 parser.add_argument('--momentum', type=float, nargs='?', default=0, help='the momentum to use betweeon 0 and 1')
-parser.add_argument('--use_rprop', type=bool, help='True if using rprop, False if using sgd')
+parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
 args = parser.parse_args()
 
-
+print(args)
 if args.num_trials > 0:
     # create study and optimize
     study = optuna.create_study()
@@ -203,5 +219,6 @@ if args.num_trials > 0:
 else:
     # only train the model on the specified params and test it
     trainloader, validloader, testloader = load_data(args.batch_size)
-    _, trained_network = run_model(trainloader, validloader, args.epochs, args.use_rprop, args.learning_rate, args.momentum)
+    print("USE RPROP: ", args.use_rprop)
+    _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop, learning_rate=args.learning_rate, momentum=args.momentum)
     test_model(testloader, trained_network)
