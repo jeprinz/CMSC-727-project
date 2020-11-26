@@ -27,12 +27,18 @@ def objective(trial, args):
     momentum = trial.suggest_uniform('momentum', 0.1, 0.9)
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
 
-    valid_accuracy, _, _ = run_model(epochs=args.epochs, batch_size=batch_size, use_rprop=args.use_rprop,
+    trainloader, validloader, _ = load_data(batch_size)
+    valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs, use_rprop=args.use_rprop,
                          learning_rate=learning_rate, momentum=momentum)
     return -1 * valid_accuracy
 
+
 def load_data(batch_size):
-    # load data
+    '''
+    Function to load the data and create trainloader, validloader, and testloader
+    :param batch_size:
+    :return:
+    '''
     transform = transforms.Compose(
         [transforms.ToTensor(),
          transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -49,6 +55,7 @@ def load_data(batch_size):
     np.random.seed(42)
     np.random.shuffle(indices)
     train_idx, valid_idx = indices[split:], indices[:split]
+
     train_sampler = SubsetRandomSampler(train_idx)
     valid_sampler = SubsetRandomSampler(valid_idx)
 
@@ -65,8 +72,11 @@ def load_data(batch_size):
     return trainloader, validloader, testloader
 
 
+def create_model():
+    return Net()
 
-def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
+
+def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum):
     '''
     Function to run (train and test) the model once
     :param epochs: number of training epochs
@@ -76,12 +86,8 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
     :param momentum:
     :return:
     '''
-
-    # load the data
-    trainloader, validloader, testloader = load_data(batch_size)
-
     # set up the model and optimizer
-    net = Net()
+    net = create_model()
 
     criterion = nn.CrossEntropyLoss()
     if(use_rprop):
@@ -135,11 +141,16 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
     print('Finished Training')
     print("train size: ", total_train)
 
-    return valid_accuracy, net, testloader
+    return valid_accuracy, net
 
 
 def test_model(testloader, net):
-    # test the model
+    '''
+    Function to test a fully trained model
+    :param testloader: dataloder containing the test data
+    :param net: the trained network
+    :return:
+    '''
     correct = 0
     total = 0
     with torch.no_grad():
@@ -166,10 +177,10 @@ def test_model(testloader, net):
                 class_correct[label] += c[i].item()
                 class_total[label] += 1
 
-
     for i in range(10):
         print('Accuracy of %5s : %2d %%' % (
             classes[i], 100 * class_correct[i] / class_total[i]))
+
 
 
 # parse command line args
@@ -191,6 +202,6 @@ if args.num_trials > 0:
     print("The best parameters are: \n", study.best_params)
 else:
     # only train the model on the specified params and test it
-    _, net, testloader = run_model(args.epochs, args.batch_size, args.use_rprop, args.learning_rate, args.momentum)
-    test_model(testloader, net)
-
+    trainloader, validloader, testloader = load_data(args.batch_size)
+    _, trained_network = run_model(trainloader, validloader, args.epochs, args.use_rprop, args.learning_rate, args.momentum)
+    test_model(testloader, trained_network)
