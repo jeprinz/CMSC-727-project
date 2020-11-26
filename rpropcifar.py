@@ -31,17 +31,7 @@ def objective(trial, args):
                          learning_rate=learning_rate, momentum=momentum)
     return -1 * valid_accuracy
 
-
-def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
-    '''
-    Function to run (train and test) the model once
-    :param epochs: number of training epochs
-    :param batch_size:
-    :param use_rprop: True if using rprop optimizer, False if using SGD optimizer
-    :param learning_rate:
-    :param momentum:
-    :return:
-    '''
+def load_data(batch_size):
     # load data
     transform = transforms.Compose(
         [transforms.ToTensor(),
@@ -72,7 +62,23 @@ def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
                                            download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=False, num_workers=0)
+    return trainloader, validloader, testloader
 
+
+
+def run_model(epochs, batch_size, use_rprop, learning_rate, momentum):
+    '''
+    Function to run (train and test) the model once
+    :param epochs: number of training epochs
+    :param batch_size:
+    :param use_rprop: True if using rprop optimizer, False if using SGD optimizer
+    :param learning_rate:
+    :param momentum:
+    :return:
+    '''
+
+    # load the data
+    trainloader, validloader, testloader = load_data(batch_size)
 
     # set up the model and optimizer
     net = Net()
