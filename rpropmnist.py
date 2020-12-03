@@ -12,6 +12,8 @@ import argparse
 import optuna
 from MNIST_Net import Net
 
+torch.set_num_threads(16)
+
 
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -91,7 +93,7 @@ def create_model():
     return Net()
 
 
-def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizs=None):
+def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None):
     '''
     Function to run (train and test) the model once
     :param epochs: number of training epochs
