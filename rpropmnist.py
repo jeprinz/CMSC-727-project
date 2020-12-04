@@ -34,7 +34,7 @@ def objective(trial, args):
     fc1_size = int(trial.suggest_discrete_uniform('fc1_size', 100, 300, 1))
     fc2_size = int(trial.suggest_discrete_uniform('fc2_size', 20, 100, 1))
 
-    trainloader, validloader, _ = load_data(batch_size)
+    trainloader, validloader, _ = load_data(batch_size, args.gpu)
 
     if args.use_rprop:
         eta_minus = trial.suggest_uniform('eta_minus', 0, 1.2)
@@ -46,16 +46,18 @@ def objective(trial, args):
         step_sizes = (step_minus, step_plus)
 
         valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs, use_rprop=args.use_rprop,
-                         learning_rate=learning_rate, etas=etas, step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
+                         learning_rate=learning_rate, etas=etas, step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
+                         gpu = args.gpu)
     else:
         valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs,
                                       use_rprop=args.use_rprop, learning_rate=learning_rate, momentum=momentum,
-                                      num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
+                                      num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
+                                      gpu = args.gpu)
 
     return -1 * valid_accuracy
 
 
-def load_data(batch_size):
+def load_data(batch_size, gpu):
     '''
     Function to load the data and create trainloader, validloader, and testloader
     :param batch_size:
@@ -92,14 +94,26 @@ def load_data(batch_size):
                                            download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=False, num_workers=0)
-    return trainloader, validloader, testloader
+
+    if gpu:
+        def getData(loader):
+            l = []
+            for data in loader:
+                inputsOrImages, labels = data
+                inputsOrImages = inputsOrImages.cuda()
+                labels = labels.cuda()
+                l.append((inputsOrImages, labels))
+            return l
+        return getData(trainloader), getData(validloader), getData(testloader)
+    else:
+        return trainloader, validloader, testloader
 
 
 def create_model(num_filters, fc1_size, fc2_size):
     return Net(num_filters, fc1_size, fc2_size)
 
 
-def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None, num_filters=6, fc1_size=120, fc2_size=84, save_weights=False):
+def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None, num_filters=6, fc1_size=120, fc2_size=84, save_weights=False, gpu=False):
     '''
     Function to run (train and test) the model once
     :param epochs: number of training epochs
@@ -111,6 +125,9 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
     '''
     # set up the model and optimizer
     net = create_model(num_filters, fc1_size, fc2_size)
+    if gpu:
+        print('using gpu!!!!!')
+        net = net.cuda()
 
     criterion = nn.CrossEntropyLoss()
     if(use_rprop):
@@ -243,6 +260,7 @@ parser.add_argument('--fc1_size', type=int, nargs='?', default=120, help='how bi
 parser.add_argument('--fc2_size', type=int, nargs='?', default=84, help='how big the second fully connected layer should be')
 parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
 parser.add_argument('--save_weights', type=bool, default=False, help='True if saving weights to pickle file')
+parser.add_argument('--gpu', type=bool, default=False, help='Run on gpu using cuda (requires Nvidia-brand gpu)')
 args = parser.parse_args()
 
 print(args)
@@ -256,7 +274,7 @@ if args.num_trials > 0:
     print("Average train time: ", average_timedelta)
 else:
     # only train the model on the specified params and test it
-    trainloader, validloader, testloader = load_data(args.batch_size)
+    trainloader, validloader, testloader = load_data(args.batch_size, args.gpu)
     etas = (args.eta_minus, args.eta_plus)
     step_sizes = (args.step_minus, args.step_plus)
     num_filters = args.num_filters
@@ -266,5 +284,7 @@ else:
     _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop,
                                    learning_rate=args.learning_rate, momentum=args.momentum, etas=etas,
                                    step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
-                                   save_weights=args.save_weights)
+                                   save_weights=args.save_weights,
+                                   gpu = args.gpu)
     test_model(testloader, trained_network)
+    
