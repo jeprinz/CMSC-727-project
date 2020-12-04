@@ -10,11 +10,14 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 import argparse
 import optuna
+from datetime import datetime, timedelta
 from Net import Net
 
 
 classes = ('plane', 'car', 'bird', 'cat',
            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+timer_arr = []
 
 def objective(trial, args):
     '''
@@ -115,6 +118,7 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
     # train the model
+    start_time = datetime.now()
     for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
@@ -157,7 +161,12 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
                 100 * correct / total))
         valid_accuracy = 100 * correct / total
 
-    print('Finished Training')
+    # do timing stuff
+    end_time = datetime.now()
+    total_time = end_time-start_time
+    print('Finished Training in: ', total_time)
+    timer_arr.append(total_time)
+
     print("train size: ", total_train)
 
     return valid_accuracy, net
@@ -219,6 +228,11 @@ if args.num_trials > 0:
     study = optuna.create_study()
     study.optimize(lambda trial: objective(trial, args), n_trials=args.num_trials)
     print("The best parameters are: \n", study.best_params)
+    average_timedelta = sum(timer_arr, timedelta(0)) / len(timer_arr)
+    print("times for all trials: ", timer_arr)
+    print("Average train time: ", average_timedelta)
+
+
 else:
     # only train the model on the specified params and test it
     trainloader, validloader, testloader = load_data(args.batch_size)
