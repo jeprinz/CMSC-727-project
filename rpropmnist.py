@@ -26,6 +26,9 @@ def objective(trial, args):
     learning_rate = trial.suggest_uniform('learning_rate', 0.001, 0.5)
     momentum = 0 #trial.suggest_uniform('momentum', 0.1, 0.9)
     batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
+    num_filters = int(trial.suggest_discrete_uniform('num_filters', 4, 200, 1))
+    fc1_size = int(trial.suggest_discrete_uniform('fc1_size', 100, 300, 1))
+    fc2_size = int(trial.suggest_discrete_uniform('fc2_size', 20, 100, 1))
 
     trainloader, validloader, _ = load_data(batch_size)
 
@@ -39,10 +42,11 @@ def objective(trial, args):
         step_sizes = (step_minus, step_plus)
 
         valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs, use_rprop=args.use_rprop,
-                         learning_rate=learning_rate, etas=etas, step_sizes=step_sizes)
+                         learning_rate=learning_rate, etas=etas, step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
     else:
         valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs,
-                                      use_rprop=args.use_rprop, learning_rate=learning_rate, momentum=momentum)
+                                      use_rprop=args.use_rprop, learning_rate=learning_rate, momentum=momentum,
+                                      num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
 
     return -1 * valid_accuracy
 
@@ -87,11 +91,11 @@ def load_data(batch_size):
     return trainloader, validloader, testloader
 
 
-def create_model():
-    return Net()
+def create_model(num_filters, fc1_size, fc2_size):
+    return Net(num_filters, fc1_size, fc2_size)
 
 
-def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizs=None):
+def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None, num_filters=6, fc1_size=120, fc2_size=84):
     '''
     Function to run (train and test) the model once
     :param epochs: number of training epochs
@@ -102,7 +106,7 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
     :return:
     '''
     # set up the model and optimizer
-    net = create_model()
+    net = create_model(num_filters, fc1_size, fc2_size)
 
     criterion = nn.CrossEntropyLoss()
     if(use_rprop):
@@ -208,6 +212,13 @@ parser.add_argument('--num_trials', type=int,
 parser.add_argument('--batch_size', type=int, nargs='?', default=16, help='number of samples per training batch')
 parser.add_argument('--learning_rate', type=float, nargs='?', default=0.1, help='the learning rate between 0 and 1')
 parser.add_argument('--momentum', type=float, nargs='?', default=0, help='the momentum to use betweeon 0 and 1')
+parser.add_argument('--eta_minus', type=float, nargs='?', default=0, help='the eta lower bound for RPROP only')
+parser.add_argument('--eta_plus', type=float, nargs='?', default=0, help='the eta upper bound for RPROP only')
+parser.add_argument('--step_minus', type=float, nargs='?', default=0, help='the step size lower bound for RPROP only')
+parser.add_argument('--step_plus', type=float, nargs='?', default=0, help='the step size upper bound for RPROP only')
+parser.add_argument('--num_filters', type=int, nargs='?', default=6, help='how big the conv layer should be')
+parser.add_argument('--fc1_size', type=int, nargs='?', default=120, help='how big the first fully connected layer should be')
+parser.add_argument('--fc2_size', type=int, nargs='?', default=84, help='how big the second fully connected layer should be')
 parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
 args = parser.parse_args()
 
@@ -220,6 +231,13 @@ if args.num_trials > 0:
 else:
     # only train the model on the specified params and test it
     trainloader, validloader, testloader = load_data(args.batch_size)
+    etas = (args.eta_minus, args.eta_plus)
+    step_sizes = (args.step_minus, args.step_plus)
+    num_filters = args.num_filters
+    fc1_size = args.fc1_size
+    fc2_size = args.fc2_size
     print("USE RPROP: ", args.use_rprop)
-    _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop, learning_rate=args.learning_rate, momentum=args.momentum)
+    _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop,
+                                   learning_rate=args.learning_rate, momentum=args.momentum, etas=etas,
+                                   step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
     test_model(testloader, trained_network)

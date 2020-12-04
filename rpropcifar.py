@@ -233,8 +233,8 @@ parser.add_argument('--eta_plus', type=float, nargs='?', default=0, help='the et
 parser.add_argument('--step_minus', type=float, nargs='?', default=0, help='the step size lower bound for RPROP only')
 parser.add_argument('--step_plus', type=float, nargs='?', default=0, help='the step size upper bound for RPROP only')
 parser.add_argument('--num_filters', type=int, nargs='?', default=6, help='how big the conv layer should be')
-parser.add_argument('--fc1_size', type=float, nargs='?', default=120, help='how big the first fully connected layer should be')
-parser.add_argument('--fc2_size', type=float, nargs='?', default=84, help='how big the second fully connected layer should be')
+parser.add_argument('--fc1_size', type=int, nargs='?', default=120, help='how big the first fully connected layer should be')
+parser.add_argument('--fc2_size', type=int, nargs='?', default=84, help='how big the second fully connected layer should be')
 parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
 args = parser.parse_args()
 
