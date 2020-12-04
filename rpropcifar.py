@@ -219,6 +219,10 @@ parser.add_argument('--num_trials', type=int,
 parser.add_argument('--batch_size', type=int, nargs='?', default=16, help='number of samples per training batch')
 parser.add_argument('--learning_rate', type=float, nargs='?', default=0.1, help='the learning rate between 0 and 1')
 parser.add_argument('--momentum', type=float, nargs='?', default=0, help='the momentum to use betweeon 0 and 1')
+parser.add_argument('--eta_minus', type=float, nargs='?', default=0, help='the eta lower bound for RPROP only')
+parser.add_argument('--eta_plus', type=float, nargs='?', default=0, help='the eta upper bound for RPROP only')
+parser.add_argument('--step_minus', type=float, nargs='?', default=0, help='the step size lower bound for RPROP only')
+parser.add_argument('--step_plus', type=float, nargs='?', default=0, help='the step size upper bound for RPROP only')
 parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
 args = parser.parse_args()
 
@@ -231,11 +235,12 @@ if args.num_trials > 0:
     average_timedelta = sum(timer_arr, timedelta(0)) / len(timer_arr)
     print("times for all trials: ", timer_arr)
     print("Average train time: ", average_timedelta)
-
-
 else:
     # only train the model on the specified params and test it
     trainloader, validloader, testloader = load_data(args.batch_size)
+    etas = (args.eta_minus, args.eta_plus)
+    step_sizes = (args.step_minus, args.step_plus)
     print("USE RPROP: ", args.use_rprop)
-    _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop, learning_rate=args.learning_rate, momentum=args.momentum)
+    _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop,
+                                   learning_rate=args.learning_rate, momentum=args.momentum, etas=etas, step_sizes=step_sizes)
     test_model(testloader, trained_network)
