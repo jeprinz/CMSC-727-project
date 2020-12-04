@@ -28,7 +28,7 @@ def objective(trial, args):
     '''
     learning_rate = trial.suggest_uniform('learning_rate', 0.001, 0.5)
     momentum = 0 #trial.suggest_uniform('momentum', 0.1, 0.9)
-    batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128]))
+    batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128, 256, 513]))
     num_filters = int(trial.suggest_discrete_uniform('num_filters', 4, 200, 1))
     fc1_size = int(trial.suggest_discrete_uniform('fc1_size', 100, 300, 1))
     fc2_size = int(trial.suggest_discrete_uniform('fc2_size', 20, 100, 1))
