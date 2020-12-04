@@ -223,6 +223,9 @@ parser.add_argument('--eta_minus', type=float, nargs='?', default=0, help='the e
 parser.add_argument('--eta_plus', type=float, nargs='?', default=0, help='the eta upper bound for RPROP only')
 parser.add_argument('--step_minus', type=float, nargs='?', default=0, help='the step size lower bound for RPROP only')
 parser.add_argument('--step_plus', type=float, nargs='?', default=0, help='the step size upper bound for RPROP only')
+parser.add_argument('--num_filters', type=int, nargs='?', default=6, help='how big the conv layer should be')
+parser.add_argument('--fc1_size', type=float, nargs='?', default=120, help='how big the first fully connected layer should be')
+parser.add_argument('--fc2_size', type=float, nargs='?', default=84, help='how big the second fully connected layer should be')
 parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
 args = parser.parse_args()
 
@@ -240,7 +243,12 @@ else:
     trainloader, validloader, testloader = load_data(args.batch_size)
     etas = (args.eta_minus, args.eta_plus)
     step_sizes = (args.step_minus, args.step_plus)
+    num_filters = args.num_filters
+    fc1_size = args.fc1_size
+    fc2_size = args.fc2_size
     print("USE RPROP: ", args.use_rprop)
     _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop,
-                                   learning_rate=args.learning_rate, momentum=args.momentum, etas=etas, step_sizes=step_sizes)
+                                   learning_rate=args.learning_rate, momentum=args.momentum, etas=etas,
+                                   step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
     test_model(testloader, trained_network)
+
