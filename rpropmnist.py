@@ -120,6 +120,7 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
 
     # train the model
+    weights = [[net.conv1.weight], [net.conv2.weight], [net.fc1.weight], [net.fc2.weight], [net.fc3.weight]]
     start_time = datetime.now()
     for epoch in range(epochs):  # loop over the dataset multiple times
 
@@ -147,6 +148,12 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
 
             total_train += labels.size(0)
 
+        weights[0].append(net.conv1.weight)
+        weights[1].append(net.conv2.weight)
+        weights[2].append(net.fc1.weight)
+        weights[3].append(net.fc2.weight)
+        weights[4].append(net.fc3.weight)
+
 
         # test the model ont he validation set
         correct = 0
@@ -172,6 +179,8 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
     timer_arr.append(total_time)
 
     print("train size: ", total_train)
+
+    print(weights)
 
     return valid_accuracy, net
 
