@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 import numpy as np
 from torch.utils.data.sampler import SubsetRandomSampler
+import pickle
 
 import argparse
 import optuna
@@ -96,7 +97,7 @@ def create_model(num_filters, fc1_size, fc2_size):
     return Net(num_filters, fc1_size, fc2_size)
 
 
-def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None, num_filters=6, fc1_size=120, fc2_size=84):
+def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None, num_filters=6, fc1_size=120, fc2_size=84, save_weights=False):
     '''
     Function to run (train and test) the model once
     :param epochs: number of training epochs
@@ -176,7 +177,8 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
 
     print("train size: ", total_train)
 
-    print(weights)
+    if save_weights:
+        pickle.dump(weights, open("weights.p", "wb"))
 
     return valid_accuracy, net
 
@@ -236,6 +238,7 @@ parser.add_argument('--num_filters', type=int, nargs='?', default=6, help='how b
 parser.add_argument('--fc1_size', type=int, nargs='?', default=120, help='how big the first fully connected layer should be')
 parser.add_argument('--fc2_size', type=int, nargs='?', default=84, help='how big the second fully connected layer should be')
 parser.add_argument('--use_rprop', type=bool, default=False, help='True if using rprop, False if using sgd')
+parser.add_argument('--save_weights', type=bool, default=False, help='True if saving weights to pickle file')
 args = parser.parse_args()
 
 print(args)
@@ -258,6 +261,7 @@ else:
     print("USE RPROP: ", args.use_rprop)
     _, trained_network = run_model(trainloader, validloader, epochs=args.epochs, use_rprop=args.use_rprop,
                                    learning_rate=args.learning_rate, momentum=args.momentum, etas=etas,
-                                   step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
+                                   step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
+                                   save_weights=args.save_weights)
     test_model(testloader, trained_network)
 
