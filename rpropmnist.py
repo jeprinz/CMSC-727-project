@@ -12,7 +12,7 @@ import pickle
 import argparse
 import optuna
 from datetime import datetime, timedelta
-from Net import Net
+from MNIST_Net import Net
 
 
 classes = ('plane', 'car', 'bird', 'cat',
@@ -29,7 +29,7 @@ def objective(trial, args):
     '''
     learning_rate = trial.suggest_uniform('learning_rate', 0.001, 0.5)
     momentum = 0 #trial.suggest_uniform('momentum', 0.1, 0.9)
-    batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128, 256, 512]))
+    batch_size = int(trial.suggest_categorical('batch_size', [4, 8, 16, 32, 64, 128, 256, 513]))
     num_filters = int(trial.suggest_discrete_uniform('num_filters', 4, 200, 1))
     fc1_size = int(trial.suggest_discrete_uniform('fc1_size', 100, 300, 1))
     fc2_size = int(trial.suggest_discrete_uniform('fc2_size', 20, 100, 1))
@@ -37,8 +37,8 @@ def objective(trial, args):
     trainloader, validloader, _ = load_data(batch_size)
 
     if args.use_rprop:
-        eta_minus = trial.suggest_uniform('eta_minus', 0, 1)
-        eta_plus = trial.suggest_uniform('eta_plus', 1, 2)
+        eta_minus = trial.suggest_uniform('eta_minus', 0, 1.2)
+        eta_plus = trial.suggest_uniform('eta_plus', 1.2, 5)
         etas = (eta_minus, eta_plus)
 
         step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
@@ -49,7 +49,8 @@ def objective(trial, args):
                          learning_rate=learning_rate, etas=etas, step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
     else:
         valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs,
-                                      use_rprop=args.use_rprop, learning_rate=learning_rate, momentum=momentum, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
+                                      use_rprop=args.use_rprop, learning_rate=learning_rate, momentum=momentum,
+                                      num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
 
     return -1 * valid_accuracy
 
@@ -60,13 +61,14 @@ def load_data(batch_size):
     :param batch_size:
     :return:
     '''
-    transform = transforms.Compose(
-        [transforms.ToTensor(),
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+    trainset = torchvision.datasets.MNIST(root='./data', train=True,
                                             download=True, transform=transform)
-    validset = torchvision.datasets.CIFAR10(root='./data', train=True,
+    validset = torchvision.datasets.MNIST(root='./data', train=True,
                                             download=True, transform=transform)
 
     num_train = len(trainset)
@@ -86,7 +88,7 @@ def load_data(batch_size):
                                               sampler=valid_sampler, num_workers=0)
 
     #set num_workers to 0 if you get a BrokenPipeError
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+    testset = torchvision.datasets.MNIST(root='./data', train=False,
                                            download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                              shuffle=False, num_workers=0)
@@ -169,9 +171,11 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
                 100 * correct / total))
         valid_accuracy = 100 * correct / total
 
+    print('Finished Training')
+
     # do timing stuff
     end_time = datetime.now()
-    total_time = end_time-start_time
+    total_time = end_time - start_time
     print('Finished Training in: ', total_time)
     timer_arr.append(total_time)
 
@@ -264,4 +268,3 @@ else:
                                    step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
                                    save_weights=args.save_weights)
     test_model(testloader, trained_network)
-
