@@ -41,7 +41,8 @@ def objective(trial, args):
         eta_plus = trial.suggest_uniform('eta_plus', 1, 2)
         etas = (eta_minus, eta_plus)
 
-        step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
+        # step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
+        step_minus = trial.suggest_uniform('step_minus', 0.0000005, 0.000002)
         step_plus = trial.suggest_uniform('step_plus', 20, 100)
         step_sizes = (step_minus, step_plus)
 
@@ -112,9 +113,6 @@ def create_model(num_filters, fc1_size, fc2_size):
 
 def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, momentum=0, etas=None, step_sizes=None, num_filters=6, fc1_size=120, fc2_size=84, save_weights=False, gpu=False):
     '''
-    Function to run (train and test) the model once
-    :param epochs: number of training epochs
-    :param batch_size:
     :param use_rprop: True if using rprop optimizer, False if using SGD optimizer
     :param learning_rate:
     :param momentum:
@@ -281,4 +279,3 @@ else:
                                    step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
                                    save_weights=args.save_weights, gpu = args.gpu)
     test_model(testloader, trained_network)
-    

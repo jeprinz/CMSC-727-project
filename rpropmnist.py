@@ -37,11 +37,13 @@ def objective(trial, args):
     trainloader, validloader, _ = load_data(batch_size, args.gpu)
 
     if args.use_rprop:
-        eta_minus = trial.suggest_uniform('eta_minus', 0, 1.2)
-        eta_plus = trial.suggest_uniform('eta_plus', 1.2, 5)
+        # eta_minus = trial.suggest_uniform('eta_minus', 0, 1.2)
+        eta_minus = trial.suggest_uniform('eta_minus', 0, 1)
+        eta_plus = trial.suggest_uniform('eta_plus', 1, 2)
         etas = (eta_minus, eta_plus)
 
-        step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
+        # step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
+        step_minus = trial.suggest_uniform('step_minus', 0.0000005, 0.000002)
         step_plus = trial.suggest_uniform('step_plus', 20, 100)
         step_sizes = (step_minus, step_plus)
 
@@ -287,4 +289,3 @@ else:
                                    save_weights=args.save_weights,
                                    gpu = args.gpu)
     test_model(testloader, trained_network)
-    
