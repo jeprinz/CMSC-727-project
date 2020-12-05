@@ -37,13 +37,15 @@ def objective(trial, args):
     trainloader, validloader, _ = load_data(batch_size)
 
     if args.use_rprop:
-        eta_minus = trial.suggest_uniform('eta_minus', 0, 1)
-        eta_plus = trial.suggest_uniform('eta_plus', 1, 2)
+        eta_minus = trial.suggest_uniform('eta_minus', 0.5, 0.5)
+        eta_plus = trial.suggest_uniform('eta_plus', 1.2, 1.2)
         etas = (eta_minus, eta_plus)
+        print("etas: ", etas)
 
-        step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.1)
-        step_plus = trial.suggest_uniform('step_plus', 20, 100)
+        step_minus = trial.suggest_uniform('step_minus', 0.000001, 0.000001)
+        step_plus = trial.suggest_uniform('step_plus', 50, 50)
         step_sizes = (step_minus, step_plus)
+        print("step: ", step_sizes)
 
         valid_accuracy, _ = run_model(trainloader=trainloader, validloader=validloader, epochs=args.epochs, use_rprop=args.use_rprop,
                          learning_rate=learning_rate, etas=etas, step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size)
@@ -114,6 +116,9 @@ def run_model(trainloader, validloader, epochs, use_rprop, learning_rate, moment
     if(use_rprop):
         print("using rprop!!!!")
         optimizer = optim.Rprop(net.parameters(), lr=learning_rate, etas=etas, step_sizes=step_sizes) #(default params: lr = 0.01, etas = (0.5,1.2), step_sizes(1e-06,50))
+        print("etas2: ", etas)
+        print("Step2: ", step_sizes)
+        print("opt: ", optimizer)
     else:
         print("using sgd!!!")
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum)
@@ -263,5 +268,6 @@ else:
                                    learning_rate=args.learning_rate, momentum=args.momentum, etas=etas,
                                    step_sizes=step_sizes, num_filters=num_filters, fc1_size=fc1_size, fc2_size=fc2_size,
                                    save_weights=args.save_weights)
+    print("valid", _)
     test_model(testloader, trained_network)
 
